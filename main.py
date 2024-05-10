@@ -40,6 +40,7 @@ def get_vannila_versions():
             dpg.add_table_column(label="id")
             dpg.add_table_column(label="version")
 
+
             for index, version in enumerate(get.get_vannila_versions()):
                 with dpg.table_row():
                     dpg.add_text(index)
