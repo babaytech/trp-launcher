@@ -12,9 +12,22 @@ ram_info = psutil.virtual_memory()
 config = configparser.ConfigParser()
 
 
-@logger.catch()
-def install(version):
-    print(version)
+def install(sender):
+    version = dpg.get_item_label(sender)
+
+    with dpg.window(width=250):
+        dpg.add_progress_bar(label="install", width=200)
+
+    get = launcher(directory=config.get("default",
+                                        "directory"
+                                        ),
+                   username=config.get("default",
+                                       "username"
+                                       )
+                   )
+    get.download(version=version)
+
+
 
 
 @logger.catch()
@@ -25,27 +38,25 @@ def get_vannila_versions():
         pass
 
     config.read("config.ini")
-    version = None
     get = launcher(directory=config.get("default",
                                         "directory"
                                         ),
                    username=config.get("default",
                                        "username"
-                                       ),
-                   version=version
+                                       )
                    )
 
-    with dpg.window(label="vanilla", tag="vanilla window") as window:
+    with dpg.window(label="vanilla", tag="vanilla window", width=int(WIDTH / 2), height=int(HEIGHT / 2)) as window:
         with dpg.table():
             dpg.add_table_column(label="id")
             dpg.add_table_column(label="version")
 
-
             for index, version in enumerate(get.get_vannila_versions()):
                 with dpg.table_row():
-                    dpg.add_text(index)
+                    dpg.add_text(f"{index}")
+
                     with dpg.table_cell():
-                        dpg.add_button(label=f"{version["id"]}", user_data=f"{version["id"]}", callback=install)
+                        dpg.add_selectable(label=f"{version["id"]}", callback=install, tag=str(index))
 
 
 @logger.catch()

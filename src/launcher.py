@@ -6,7 +6,7 @@ from loguru import logger
 
 class Launcher:
     @logger.catch
-    def __init__(self, directory, username, version):
+    def __init__(self, directory, username):
         logger.add("./logs/launcher_logic.log", rotation="500 MB")
         self.options = {
             "username": username,
@@ -20,7 +20,6 @@ class Launcher:
         self.data_user = {
             "directory": directory,
             "username": username,
-            "version": version
         }
 
     @logger.catch
