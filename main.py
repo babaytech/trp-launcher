@@ -1,4 +1,6 @@
 import psutil
+import os
+import minecraft_launcher_lib
 from src.launcher import Launcher as launcher
 import dearpygui.dearpygui as dpg
 import configparser
@@ -12,28 +14,64 @@ ram_info = psutil.virtual_memory()
 config = configparser.ConfigParser()
 
 
-def install(sender):
-    version = dpg.get_item_label(sender)
-
-    with dpg.window(width=250):
-        dpg.add_progress_bar(label="install", width=200)
-
-    get = launcher(directory=config.get("default",
-                                        "directory"
-                                        ),
-                   username=config.get("default",
-                                       "username"
-                                       )
+@logger.catch()
+def run_minecraft():
+    installed_versions = os.listdir(
+        config.get("default",
+                   "directory"
                    )
-    get.download(version=version)
+    )
+    print(installed_versions)
 
 
+def install(sender):
+    try:
+        dpg.remove_alias("progress")
+        dpg.remove_alias("test status")
+        dpg.remove_alias("progress window")
+
+    except:
+        pass
+
+    version = dpg.get_item_label(sender)
+    current_max = 0
+
+    def set_status(status: str):
+        dpg.set_value("text status", status)
+
+    def set_progress(progress: int):
+        if current_max != 0:
+            dpg.set_value("progress", value=float(progress / current_max))
+        print(f"{progress}/{current_max}", end="\r")
+
+    def set_max(new_max: int):
+        global current_max
+        current_max = new_max
+
+    with dpg.window(width=400, tag="progress window"):
+        dpg.add_progress_bar(label="install", width=400, tag="progress", default_value=0.0)
+        dpg.add_text("", tag="text status")
+
+    callback = {
+        "setStatus": set_status,
+        "setProgress": set_progress,
+        "setMax": set_max
+    }
+
+    logger.success(f"download version: {version}")
+    minecraft_launcher_lib.install.install_minecraft_version(version,
+                                                             config.get("default",
+                                                                        "directory"),
+                                                             callback=callback)
 
 
 @logger.catch()
-def get_vannila_versions():
+def get_vanilla_versions():
     try:
         dpg.remove_alias("vanilla window")
+        dpg.remove_alias("index")
+        dpg.remove_alias("type")
+        dpg.remove_alias("version")
     except:
         pass
 
@@ -46,14 +84,18 @@ def get_vannila_versions():
                                        )
                    )
 
-    with dpg.window(label="vanilla", tag="vanilla window", width=int(WIDTH / 2), height=int(HEIGHT / 2)) as window:
+    with dpg.window(label="vanilla", tag="vanilla window", width=int(WIDTH / 2), height=int(HEIGHT / 2)):
         with dpg.table():
             dpg.add_table_column(label="id")
+            dpg.add_table_column(label="type")
             dpg.add_table_column(label="version")
 
             for index, version in enumerate(get.get_vannila_versions()):
                 with dpg.table_row():
                     dpg.add_text(f"{index}")
+
+                    with dpg.table_cell():
+                        dpg.add_text(f"{version["type"]}")
 
                     with dpg.table_cell():
                         dpg.add_selectable(label=f"{version["id"]}", callback=install, tag=str(index))
@@ -91,7 +133,7 @@ def settings():
     username = config.get("default", "username", )
     directory = config.get("default", "directory")
 
-    with dpg.window(label="settings", tag="settings window", width=int(WIDTH / 2), height=int(HEIGHT / 5)) as window:
+    with dpg.window(label="settings", tag="settings window", width=int(WIDTH / 2), height=int(HEIGHT / 5)):
         dpg.add_input_text(label="username",
                            default_value=username,
                            tag="username"
@@ -103,7 +145,9 @@ def settings():
         dpg.add_slider_int(label="ram usage (MB)",
                            min_value=256,
                            max_value=int(ram_info.total / 1024 / 1024),
-                           tag="ram slider"
+                           tag="ram slider",
+                           default_value=config.getint("default",
+                                                       "ram")
                            )
         dpg.add_button(label="Save",
                        callback=save_settings,
@@ -112,16 +156,18 @@ def settings():
 
 
 if __name__ == "__main__":
+    #####################################################
     logger.add("./logs/gui_logic.log", rotation="500 MB")
+    #####################################################
 
     dpg.create_context()
     dpg.create_viewport(title='Custom Title', width=WIDTH, height=HEIGHT)
 
     with dpg.window(tag="primary"):
         with dpg.menu_bar():
-            dpg.add_menu_item(label="vannila", callback=get_vannila_versions)
+            dpg.add_menu_item(label="vanilla", callback=get_vanilla_versions)
             dpg.add_menu_item(label="forge")
-            dpg.add_menu_item(label="fabrick")
+            dpg.add_menu_item(label="fabric")
             dpg.add_menu_item(label="settings", callback=settings)
 
     dpg.setup_dearpygui()
